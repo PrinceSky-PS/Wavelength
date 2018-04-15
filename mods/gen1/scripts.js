@@ -21,7 +21,7 @@ exports.BattleScripts = {
 	// This is because there was actually no side, just Battle and active Pokémon effects.
 	// Side's lastMove is used for Counter and Mirror Move.
 	side: {
-		lastMove: '',
+		lastMove: null,
 	},
 	// BattlePokemon scripts.
 	pokemon: {
@@ -100,8 +100,8 @@ exports.BattleScripts = {
 		if (!lockedMove && (!pokemon.volatiles['partialtrappinglock'] || pokemon.volatiles['partialtrappinglock'].locked !== target)) {
 			pokemon.deductPP(move, null, target);
 			// On gen 1 moves are stored when they are chosen and a PP is deducted.
-			pokemon.side.lastMove = move.id;
-			pokemon.lastMove = move.id;
+			pokemon.side.lastMove = move;
+			pokemon.lastMove = move;
 		} else {
 			sourceEffect = move;
 		}
@@ -133,15 +133,15 @@ exports.BattleScripts = {
 					sourceVolatile.locked = target;
 				} else if (target !== pokemon && target !== sourceVolatile.locked) {
 					// Our target switched out! Re-roll the duration, damage, and accuracy.
-					const duration = [2, 2, 2, 3, 3, 3, 4, 5][this.random(8)];
+					const duration = this.sample([2, 2, 2, 3, 3, 3, 4, 5]);
 					sourceVolatile.duration = duration;
 					sourceVolatile.locked = target;
 					// Duration reset thus partially trapped at 2 always.
 					targetVolatile.duration = 2;
 					// We get the move position for the PP change.
-					const moveData = pokemon.moveset.find(moveData => moveData.id === move.id);
-					if (moveData && moveData.pp === 0) {
-						moveData.pp = 63;
+					const moveSlot = pokemon.moveSlots.find(moveSlot => moveSlot.id === move.id);
+					if (moveSlot && moveSlot.pp === 0) {
+						moveSlot.pp = 63;
 						pokemon.isStale = 2;
 						pokemon.isStaleSource = 'ppoverflow';
 					}
@@ -215,7 +215,7 @@ exports.BattleScripts = {
 		// This only happens on moves that don't deal damage but call GetDamageVarsForPlayerAttack (disassembly).
 		if (!damage && (move.category !== 'Status' || (move.category === 'Status' && !['psn', 'tox', 'par'].includes(move.status))) &&
 		!['conversion', 'haze', 'mist', 'focusenergy', 'confuseray', 'supersonic', 'transform', 'lightscreen', 'reflect', 'substitute', 'mimic', 'leechseed', 'splash', 'softboiled', 'recover', 'rest'].includes(move.id)) {
-			pokemon.battle.lastDamage = 0;
+			this.lastDamage = 0;
 		}
 
 		// Go ahead with results of the used move.
@@ -285,13 +285,14 @@ exports.BattleScripts = {
 					accuracy *= boostTable[-target.boosts.evasion];
 				}
 			}
+			accuracy = Math.min(accuracy, 255);
 		}
 		accuracy = this.runEvent('Accuracy', target, pokemon, move, accuracy);
 		// Moves that target the user do not suffer from the 1/256 miss chance.
 		if (move.target === 'self' && accuracy !== true) accuracy++;
 
 		// 1/256 chance of missing always, no matter what. Besides the aforementioned exceptions.
-		if (accuracy !== true && this.random(256) >= accuracy) {
+		if (accuracy !== true && !this.randomChance(accuracy, 256)) {
 			this.attrLastMove('[miss]');
 			this.add('-miss', pokemon);
 			damage = false;
@@ -305,7 +306,7 @@ exports.BattleScripts = {
 				if (hits.length) {
 					// Yes, it's hardcoded... meh
 					if (hits[0] === 2 && hits[1] === 5) {
-						hits = [2, 2, 3, 3, 4, 5][this.random(6)];
+						hits = this.sample([2, 2, 3, 3, 4, 5]);
 					} else {
 						hits = this.random(hits[0], hits[1] + 1);
 					}
@@ -563,15 +564,15 @@ exports.BattleScripts = {
 
 		// Apply move secondaries.
 		if (moveData.secondaries) {
-			for (let i = 0; i < moveData.secondaries.length; i++) {
+			for (const secondary of moveData.secondaries) {
 				// We check here whether to negate the probable secondary status if it's para, burn, or freeze.
 				// In the game, this is checked and if true, the random number generator is not called.
 				// That means that a move that does not share the type of the target can status it.
 				// If a move that was not fire-type would exist on Gen 1, it could burn a Pokémon.
-				if (!(moveData.secondaries[i].status && ['par', 'brn', 'frz'].includes(moveData.secondaries[i].status) && target && target.hasType(move.type))) {
-					let effectChance = Math.floor(moveData.secondaries[i].chance * 255 / 100);
-					if (typeof moveData.secondaries[i].chance === 'undefined' || this.random(256) <= effectChance) {
-						this.moveHit(target, pokemon, move, moveData.secondaries[i], true, isSelf);
+				if (!(secondary.status && ['par', 'brn', 'frz'].includes(secondary.status) && target && target.hasType(move.type))) {
+					let effectChance = Math.ceil(secondary.chance * 256 / 100);
+					if (typeof secondary.chance === 'undefined' || this.randomChance(effectChance, 256)) {
+						this.moveHit(target, pokemon, move, secondary, true, isSelf);
 					}
 				}
 			}
@@ -652,7 +653,7 @@ exports.BattleScripts = {
 		if (!['recoil', 'drain'].includes(effect.id) && effect.effectType !== 'Status') {
 			// FIXME: The stored damage should be calculated ignoring Substitute.
 			// https://github.com/Zarel/Pokemon-Showdown/issues/2598
-			target.battle.lastDamage = damage;
+			this.lastDamage = damage;
 		}
 		damage = target.damage(damage, source, effect);
 		if (source) source.lastDamage = damage;
@@ -831,7 +832,7 @@ exports.BattleScripts = {
 			// We compare our critical hit chance against a random number between 0 and 255.
 			// If the random number is lower, we get a critical hit. This means there is always a 1/255 chance of not hitting critically.
 			if (critChance > 0) {
-				move.crit = (this.random(256) < critChance);
+				move.crit = this.randomChance(critChance, 256);
 			}
 		}
 

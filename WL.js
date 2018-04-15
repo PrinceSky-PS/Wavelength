@@ -1,6 +1,6 @@
 'use strict';
 
-let fs = require('fs');
+const FS = require("./lib/fs.js");
 let https = require('https');
 const Autolinker = require('autolinker');
 
@@ -17,7 +17,7 @@ exports.WL = {
 		pmName = (pmName ? pmName : '~Wavelength Server');
 		from = (from ? ' (PM from ' + from + ')' : '');
 		Users.users.forEach(curUser => {
-			if (curUser.group === '~' || curUser.group === '&') {
+			if (curUser.can('roomowner')) {
 				curUser.send('|pm|' + pmName + '|' + curUser.getIdentity() + '|' + message + from);
 			}
 		});
@@ -116,13 +116,13 @@ exports.WL = {
 // last two functions needed to make sure WL.regdate() fully works
 function loadRegdateCache() {
 	try {
-		regdateCache = JSON.parse(fs.readFileSync('config/regdate.json', 'utf8'));
+		regdateCache = JSON.parse(FS('config/regdate.json').readIfExistsSync());
 	} catch (e) {}
 }
 loadRegdateCache();
 
 function saveRegdateCache() {
-	fs.writeFileSync('config/regdate.json', JSON.stringify(regdateCache));
+	FS('config/regdate.json').writeSync(JSON.stringify(regdateCache));
 }
 
 function showDailyRewardAni(streak) {

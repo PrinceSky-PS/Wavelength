@@ -1,6 +1,6 @@
 'use strict';
 
-const fs = require('fs');
+const FS = require("../lib/fs.js");
 
 // This should be the default amount of money users have.
 // Ideally, this should be zero.
@@ -32,6 +32,7 @@ let Economy = global.Economy = {
 			return amount;
 		}
 	},
+
 	/**
  	* Writes the specified amount of money to the user's "bank."
  	* If a callback is specified, the amount is returned through the callback.
@@ -61,19 +62,21 @@ let Economy = global.Economy = {
 			return callback(newTotal);
 		}
 	},
+
 	writeMoneyArr: function (users, amount) {
 		for (let i = 0; i < users.length; i++) {
 			this.writeMoney(users[i], amount);
 		}
 	},
+
 	logTransaction: function (message) {
 		if (!message) return false;
-		fs.appendFile('logs/transactions.log', '[' + new Date().toUTCString() + '] ' + message + '\n', () => {});
+		FS("logs/transactions.log").append(`[${new Date().toUTCString()}] ${message}\n`);
 	},
 
 	logDice: function (message) {
 		if (!message) return false;
-		fs.appendFile('logs/dice.log', '[' + new Date().toUTCString() + '] ' + message + '\n', () => {});
+		FS("logs/dice.log").append(`[${new Date().toUTCString()}] ${message}\n`);
 	},
 };
 
@@ -133,9 +136,9 @@ exports.commands = {
 
 	gs: 'givecurrency', //You can change "gs" and "givestardust" to your currency name for an alias that applies to your currency Example: AwesomeBucks could be "ga" and "giveawesomebucks"
 	givestardust: 'givecurrency',
-	gc:'givecurrency',
+	gc: 'givecurrency',
 	givecurrency: function (target, room, user, connection, cmd) {
-		if (!this.can('forcewin')) return false;
+		if (!this.can('economy')) return false;
 		if (!target) return this.sendReply("Usage: /" + cmd + " [user], [amount]");
 		let splitTarget = target.split(',');
 		if (!splitTarget[2]) return this.sendReply("Usage: /" + cmd + " [user], [amount], [reason]");
@@ -168,9 +171,9 @@ exports.commands = {
 
 	ts: 'takecurrency', //You can change "ts" and "takestardust" to your currency name for an alias that applies to your currency Example: AwesomeBucks could be "ta" and "takeawesomebucks"
 	takestardust: 'takecurrency',
-	tc:'takecurrency',
+	tc: 'takecurrency',
 	takecurrency: function (target, room, user, connection, cmd) {
-		if (!this.can('forcewin')) return false;
+		if (!this.can('economy')) return false;
 		if (!target) return this.sendReply("Usage: /" + cmd + " [user], [amount]");
 		let splitTarget = target.split(',');
 		if (!splitTarget[2]) return this.sendReply("Usage: /" + cmd + " [user], [amount], [reason]");
@@ -248,11 +251,11 @@ exports.commands = {
 	},
 
 	moneylog: function (target, room, user) {
-		if (!this.can('forcewin')) return false;
+		if (!this.can('economy')) return false;
 		if (!target) return this.sendReply("Usage: /moneylog [number] to view the last x lines OR /moneylog [text] to search for text.");
 		let word = false;
 		if (isNaN(Number(target))) word = true;
-		let lines = fs.readFileSync('logs/transactions.log', 'utf8').split('\n').reverse();
+		let lines = FS('logs/transactions.log').readIfExistsSync().split('\n').reverse();
 		let output = '';
 		let count = 0;
 		let regex = new RegExp(target.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), "gi"); // eslint-disable-line no-useless-escape
@@ -291,7 +294,7 @@ exports.commands = {
 
 	resetstardust: 'resetmoney',
 	resetmoney: function (target, room, user) {
-		if (!this.can('roomowner')) return false;
+		if (!this.can('economy')) return false;
 		if (!target) return this.parse('/help resetmoney');
 		target = toId(target);
 		Economy.writeMoney(target, 0);
@@ -304,7 +307,7 @@ exports.commands = {
 		for (let u in Config.groups) if (Config.groups[u].symbol) bannedSymbols.push(Config.groups[u].symbol);
 		if (!user.canCustomSymbol && !user.can('vip')) return this.sendReply('You need to buy this item from the shop to use.');
 		if (!target || target.length > 1) return this.sendReply('/customsymbol [symbol] - changes your symbol (usergroup) to the specified symbol. The symbol can only be one character');
-		if (target.match(/([a-zA-Z ^0-9])/g) || bannedSymbols.indexOf(target) >= 0) {
+		if (target.match(/([a-zA-Z 0-9])/g) || bannedSymbols.indexOf(target) >= 0) {
 			return this.sendReply('This symbol is banned.');
 		}
 		user.customSymbol = target;

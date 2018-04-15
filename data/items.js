@@ -1,6 +1,7 @@
 'use strict';
 
-exports.BattleItems = {
+/**@type {{[k: string]: ItemData}} */
+let BattleItems = {
 	"abomasite": {
 		id: "abomasite",
 		name: "Abomasite",
@@ -237,7 +238,7 @@ exports.BattleItems = {
 			}
 		},
 		onEat: function (pokemon) {
-			this.boost({spd:1});
+			this.boost({spd: 1});
 		},
 		num: 205,
 		gen: 3,
@@ -289,10 +290,9 @@ exports.BattleItems = {
 			return this.chainModify(1.5);
 		},
 		onDisableMove: function (pokemon) {
-			let moves = pokemon.moveset;
-			for (let i = 0; i < moves.length; i++) {
-				if (this.getMove(moves[i].move).category === 'Status') {
-					pokemon.disableMove(moves[i].id);
+			for (const moveSlot of pokemon.moveSlots) {
+				if (this.getMove(moveSlot.move).category === 'Status') {
+					pokemon.disableMove(moveSlot.id);
 				}
 			}
 		},
@@ -463,6 +463,15 @@ exports.BattleItems = {
 		onResidualOrder: 5,
 		onResidualSubOrder: 2,
 		onResidual: function (pokemon) {
+			if (this.isTerrain('grassyterrain')) return;
+			if (pokemon.hasType('Poison')) {
+				this.heal(pokemon.maxhp / 16);
+			} else {
+				this.damage(pokemon.maxhp / 8);
+			}
+		},
+		onTerrain: function (pokemon) {
+			if (!this.isTerrain('grassyterrain')) return;
 			if (pokemon.hasType('Poison')) {
 				this.heal(pokemon.maxhp / 16);
 			} else {
@@ -539,7 +548,7 @@ exports.BattleItems = {
 				this.add('detailschange', pokemon, pokemon.details);
 				this.add('-primal', pokemon);
 			}
-			pokemon.setAbility(template.abilities['0']);
+			pokemon.setAbility(template.abilities['0'], null, true);
 			pokemon.baseAbility = pokemon.ability;
 		},
 		onTakeItem: function (item, source) {
@@ -1029,7 +1038,7 @@ exports.BattleItems = {
 		onModifyPriority: function (priority, pokemon) {
 			if (pokemon.hp <= pokemon.maxhp / 4 || (pokemon.hp <= pokemon.maxhp / 2 && pokemon.hasAbility('gluttony'))) {
 				if (pokemon.eatItem()) {
-					this.add('-activate', pokemon, 'item: Custap Berry');
+					this.add('-activate', pokemon, 'item: Custap Berry', '[consumed]');
 					pokemon.removeVolatile('custapberry');
 					return Math.round(priority) + 0.1;
 				}
@@ -1768,7 +1777,7 @@ exports.BattleItems = {
 		onResidualOrder: 26,
 		onResidualSubOrder: 2,
 		onResidual: function (pokemon) {
-			pokemon.trySetStatus('brn');
+			pokemon.trySetStatus('brn', pokemon);
 		},
 		num: 273,
 		gen: 4,
@@ -1866,7 +1875,7 @@ exports.BattleItems = {
 			basePower: 10,
 		},
 		onDamage: function (damage, target, source, effect) {
-			if (this.random(10) === 0 && damage >= target.hp && effect && effect.effectType === 'Move') {
+			if (this.randomChance(1, 10) && damage >= target.hp && effect && effect.effectType === 'Move') {
 				this.add("-activate", target, "item: Focus Band");
 				return target.hp - 1;
 			}
@@ -1944,7 +1953,7 @@ exports.BattleItems = {
 			}
 		},
 		onEat: function (pokemon) {
-			this.boost({def:1});
+			this.boost({def: 1});
 		},
 		num: 202,
 		gen: 3,
@@ -2508,7 +2517,9 @@ exports.BattleItems = {
 			basePower: 130,
 		},
 		onEffectiveness: function (typeMod, target, type, move) {
+			// @ts-ignore
 			if (target.volatiles['ingrain'] || target.volatiles['smackdown'] || this.getPseudoWeather('gravity')) return;
+			// @ts-ignore
 			if (move.type === 'Ground' && target.hasType('Flying')) return 0;
 		},
 		// airborneness negation implemented in sim/pokemon.js:Pokemon#isGrounded
@@ -2552,7 +2563,7 @@ exports.BattleItems = {
 			type: "Dragon",
 		},
 		onAfterDamage: function (damage, target, source, move) {
-			if (source && source !== target && move && move.category === 'Physical') {
+			if (source && source.hp && source !== target && move && move.category === 'Physical') {
 				if (target.eatItem()) {
 					this.damage(source.maxhp / 8, source, target);
 				}
@@ -2670,8 +2681,8 @@ exports.BattleItems = {
 		onModifyMove: function (move) {
 			if (move.category !== "Status") {
 				if (!move.secondaries) move.secondaries = [];
-				for (let i = 0; i < move.secondaries.length; i++) {
-					if (move.secondaries[i].volatileStatus === 'flinch') return;
+				for (const secondary of move.secondaries) {
+					if (secondary.volatileStatus === 'flinch') return;
 				}
 				move.secondaries.push({
 					chance: 10,
@@ -2690,7 +2701,7 @@ exports.BattleItems = {
 		onTakeItem: false,
 		zMove: "Clangorous Soulblaze",
 		zMoveFrom: "Clanging Scales",
-		zMoveUser: ["Kommo-o"],
+		zMoveUser: ["Kommo-o", "Kommo-o-Totem"],
 		num: 926,
 		gen: 7,
 		desc: "If held by a Kommo-o with Clanging Scales, it can use Clangorous Soulblaze.",
@@ -2784,6 +2795,11 @@ exports.BattleItems = {
 		onResidualOrder: 5,
 		onResidualSubOrder: 2,
 		onResidual: function (pokemon) {
+			if (this.isTerrain('grassyterrain')) return;
+			this.heal(pokemon.maxhp / 16);
+		},
+		onTerrain: function (pokemon) {
+			if (!this.isTerrain('grassyterrain')) return;
 			this.heal(pokemon.maxhp / 16);
 		},
 		num: 234,
@@ -2801,35 +2817,34 @@ exports.BattleItems = {
 		},
 		onUpdate: function (pokemon) {
 			if (!pokemon.hp) return;
-			let move = pokemon.getMoveData(pokemon.lastMove);
-			if (move && move.pp === 0) {
+			let moveSlot = pokemon.lastMove && pokemon.getMoveData(pokemon.lastMove.id);
+			if (moveSlot && moveSlot.pp === 0) {
 				pokemon.addVolatile('leppaberry');
-				pokemon.volatiles['leppaberry'].move = move;
+				pokemon.volatiles['leppaberry'].moveSlot = moveSlot;
 				pokemon.eatItem();
 			}
 		},
 		onEat: function (pokemon) {
-			let move;
+			let moveSlot;
 			if (pokemon.volatiles['leppaberry']) {
-				move = pokemon.volatiles['leppaberry'].move;
+				moveSlot = pokemon.volatiles['leppaberry'].moveSlot;
 				pokemon.removeVolatile('leppaberry');
 			} else {
 				let pp = 99;
-				for (let moveid in pokemon.moveset) {
-					if (pokemon.moveset[moveid].pp < pp) {
-						move = pokemon.moveset[moveid];
-						pp = move.pp;
+				for (const possibleMoveSlot of pokemon.moveSlots) {
+					if (possibleMoveSlot.pp < pp) {
+						moveSlot = possibleMoveSlot;
+						pp = moveSlot.pp;
 					}
 				}
 			}
-			move.pp += 10;
-			if (move.pp > move.maxpp) move.pp = move.maxpp;
-			this.add('-activate', pokemon, 'item: Leppa Berry', move.move);
+			moveSlot.pp += 10;
+			if (moveSlot.pp > moveSlot.maxpp) moveSlot.pp = moveSlot.maxpp;
+			this.add('-activate', pokemon, 'item: Leppa Berry', moveSlot.move, '[consumed]');
 			if (pokemon.item !== 'leppaberry') {
-				let foeActive = pokemon.side.foe.active;
 				let foeIsStale = false;
-				for (let i = 0; i < foeActive.length; i++) {
-					if (foeActive[i].hp && foeActive[i].isStale >= 2) {
+				for (const foeActive of pokemon.side.foe.active) {
+					if (foeActive.hp && foeActive.isStale >= 2) {
 						foeIsStale = true;
 						break;
 					}
@@ -2866,7 +2881,7 @@ exports.BattleItems = {
 			}
 		},
 		onEat: function (pokemon) {
-			this.boost({atk:1});
+			this.boost({atk: 1});
 		},
 		num: 201,
 		gen: 3,
@@ -2883,7 +2898,7 @@ exports.BattleItems = {
 			return this.chainModify([0x14CC, 0x1000]);
 		},
 		onAfterMoveSecondarySelf: function (source, target, move) {
-			if (source && source !== target && move && move.category !== 'Status' && !move.ohko) {
+			if (source && source !== target && move && move.category !== 'Status') {
 				this.damage(source.maxhp / 10, source, source, this.getItem('lifeorb'));
 			}
 		},
@@ -3158,6 +3173,7 @@ exports.BattleItems = {
 			if (this.activeMove.id !== 'knockoff' && this.activeMove.id !== 'thief' && this.activeMove.id !== 'covet') return false;
 		},
 		isUnreleased: true,
+		num: 0,
 		gen: 2,
 		desc: "Cannot be given to or taken from a Pokemon, except by Covet/Knock Off/Thief.",
 	},
@@ -3274,11 +3290,11 @@ exports.BattleItems = {
 			basePower: 10,
 			effect: function (pokemon) {
 				let conditions = ['attract', 'taunt', 'encore', 'torment', 'disable', 'healblock'];
-				for (let i = 0; i < conditions.length; i++) {
-					if (pokemon.volatiles[conditions[i]]) {
-						for (let j = 0; j < conditions.length; j++) {
-							pokemon.removeVolatile(conditions[j]);
-							if (conditions[i] === 'attract' && conditions[j] === 'attract') {
+				for (const firstCondition of conditions) {
+					if (pokemon.volatiles[firstCondition]) {
+						for (const secondCondition of conditions) {
+							pokemon.removeVolatile(secondCondition);
+							if (firstCondition === 'attract' && secondCondition === 'attract') {
 								this.add('-end', pokemon, 'move: Attract', '[from] item: Mental Herb');
 							}
 						}
@@ -3289,12 +3305,12 @@ exports.BattleItems = {
 		},
 		onUpdate: function (pokemon) {
 			let conditions = ['attract', 'taunt', 'encore', 'torment', 'disable', 'healblock'];
-			for (let i = 0; i < conditions.length; i++) {
-				if (pokemon.volatiles[conditions[i]]) {
+			for (const firstCondition of conditions) {
+				if (pokemon.volatiles[firstCondition]) {
 					if (!pokemon.useItem()) return;
-					for (let j = 0; j < conditions.length; j++) {
-						pokemon.removeVolatile(conditions[j]);
-						if (conditions[i] === 'attract' && conditions[j] === 'attract') {
+					for (const secondCondition of conditions) {
+						pokemon.removeVolatile(secondCondition);
+						if (firstCondition === 'attract' && secondCondition === 'attract') {
 							this.add('-end', pokemon, 'move: Attract', '[from] item: Mental Herb');
 						}
 					}
@@ -3470,7 +3486,7 @@ exports.BattleItems = {
 		onTakeItem: false,
 		zMove: "Let's Snuggle Forever",
 		zMoveFrom: "Play Rough",
-		zMoveUser: ["Mimikyu", "Mimikyu-Busted"],
+		zMoveUser: ["Mimikyu", "Mimikyu-Busted", "Mimikyu-Totem", "Mimikyu-Busted-Totem"],
 		num: 924,
 		gen: 7,
 		desc: "If held by a Mimikyu with Play Rough, it can use Let's Snuggle Forever.",
@@ -3867,7 +3883,7 @@ exports.BattleItems = {
 			}
 		},
 		onEat: function (pokemon) {
-			this.boost({spa:1});
+			this.boost({spa: 1});
 		},
 		num: 204,
 		gen: 3,
@@ -4194,12 +4210,45 @@ exports.BattleItems = {
 		fling: {
 			basePower: 30,
 		},
-		onModifyMove: function (move) {
-			delete move.flags['contact'];
+		onAttractPriority: -1,
+		onAttract: function (target, source, effect) {
+			if (target !== source && target === this.activePokemon && this.activeMove && this.activeMove.flags['contact']) return false;
+		},
+		onBoostPriority: -1,
+		onBoost: function (boost, target, source, effect) {
+			if (target !== source && target === this.activePokemon && this.activeMove && this.activeMove.flags['contact']) {
+				if (effect && effect.effectType === 'Ability') {
+					// Ability activation always happens for boosts
+					this.add('-activate', target, 'item: Protective Pads');
+				}
+				return false;
+			}
+		},
+		onDamagePriority: -1,
+		onDamage: function (damage, target, source, effect) {
+			if (target !== source && target === this.activePokemon && this.activeMove && this.activeMove.flags['contact']) {
+				if (effect && effect.effectType === 'Ability') {
+					this.add('-activate', source, effect.fullname);
+					this.add('-activate', target, 'item: Protective Pads');
+				}
+				return false;
+			}
+		},
+		onSetAbility: function (ability, target, source, effect) {
+			if (target !== source && target === this.activePokemon && this.activeMove && this.activeMove.flags['contact']) {
+				if (effect && effect.effectType === 'Ability') {
+					this.add('-activate', source, effect.fullname);
+					this.add('-activate', target, 'item: Protective Pads');
+				}
+				return false;
+			}
+		},
+		onSetStatus: function (status, target, source, effect) {
+			if (target !== source && target === this.activePokemon && this.activeMove && this.activeMove.flags['contact']) return false;
 		},
 		num: 880,
 		gen: 7,
-		desc: "Holder's attacks do not make contact with the target.",
+		desc: "Holder's moves are protected from adverse contact effects, except Pickpocket.",
 	},
 	"psychicgem": {
 		id: "psychicgem",
@@ -4291,7 +4340,7 @@ exports.BattleItems = {
 		id: "quickclaw",
 		onModifyPriorityPriority: -1,
 		onModifyPriority: function (priority, pokemon) {
-			if (this.random(5) === 0) {
+			if (this.randomChance(1, 5)) {
 				this.add('-activate', pokemon, 'item: Quick Claw');
 				return Math.round(priority) + 0.1;
 			}
@@ -4396,8 +4445,8 @@ exports.BattleItems = {
 		onModifyMove: function (move) {
 			if (move.category !== "Status") {
 				if (!move.secondaries) move.secondaries = [];
-				for (let i = 0; i < move.secondaries.length; i++) {
-					if (move.secondaries[i].volatileStatus === 'flinch') return;
+				for (const secondary of move.secondaries) {
+					if (secondary.volatileStatus === 'flinch') return;
 				}
 				move.secondaries.push({
 					chance: 10,
@@ -4434,7 +4483,7 @@ exports.BattleItems = {
 		onAfterMoveSecondary: function (target, source, move) {
 			if (source && source !== target && source.hp && target.hp && move && move.category !== 'Status') {
 				if (!source.isActive || !this.canSwitch(source.side) || source.forceSwitchFlag || target.forceSwitchFlag) return;
-				if (target.useItem(null, source)) { // This order is correct - the item is used up even against a pokemon with Ingrain or that otherwise can't be forced out
+				if (target.useItem(source)) { // This order is correct - the item is used up even against a pokemon with Ingrain or that otherwise can't be forced out
 					if (this.runEvent('DragOut', source, target, move)) {
 						source.forceSwitchFlag = true;
 					}
@@ -4466,7 +4515,7 @@ exports.BattleItems = {
 				this.add('detailschange', pokemon, pokemon.details);
 				this.add('-primal', pokemon);
 			}
-			pokemon.setAbility(template.abilities['0']);
+			pokemon.setAbility(template.abilities['0'], null, true);
 			pokemon.baseAbility = pokemon.ability;
 		},
 		onTakeItem: function (item, source) {
@@ -4664,7 +4713,7 @@ exports.BattleItems = {
 			type: "Dark",
 		},
 		onAfterDamage: function (damage, target, source, move) {
-			if (source && source !== target && move && move.category === 'Special') {
+			if (source && source.hp && source !== target && move && move.category === 'Special') {
 				if (target.eatItem()) {
 					this.damage(source.maxhp / 8, source, target);
 				}
@@ -4732,7 +4781,7 @@ exports.BattleItems = {
 			}
 		},
 		onEat: function (pokemon) {
-			this.boost({spe:1});
+			this.boost({spe: 1});
 		},
 		num: 203,
 		gen: 3,
@@ -5209,7 +5258,7 @@ exports.BattleItems = {
 				}
 			}
 			if (stats.length) {
-				let randomStat = stats[this.random(stats.length)];
+				let randomStat = this.sample(stats);
 				let boost = {};
 				boost[randomStat] = 2;
 				this.boost(boost);
@@ -5312,6 +5361,7 @@ exports.BattleItems = {
 		onHit: function (target, source, move) {
 			if (source && source !== target && !source.item && move && move.flags['contact']) {
 				let barb = target.takeItem();
+				// @ts-ignore
 				source.setItem(barb);
 				// no message for Sticky Barb changing hands
 			}
@@ -5452,7 +5502,7 @@ exports.BattleItems = {
 		onResidualOrder: 26,
 		onResidualSubOrder: 2,
 		onResidual: function (pokemon) {
-			pokemon.trySetStatus('tox');
+			pokemon.trySetStatus('tox', pokemon);
 		},
 		num: 272,
 		gen: 4,
@@ -5853,6 +5903,7 @@ exports.BattleItems = {
 			pokemon.addVolatile('confusion');
 			pokemon.setItem('');
 		},
+		num: 0,
 		gen: 2,
 		isNonstandard: 'gen2',
 		desc: "(Gen 2) On switch-in, raises holder's Attack by 2 and confuses it. Single use.",
@@ -6048,35 +6099,35 @@ exports.BattleItems = {
 			type: "Fighting",
 		},
 		onUpdate: function (pokemon) {
-			let move = pokemon.getMoveData(pokemon.lastMove);
-			if (move && move.pp === 0) {
+			let moveSlot = pokemon.lastMove && pokemon.getMoveData(pokemon.lastMove.id);
+			if (moveSlot && moveSlot.pp === 0) {
 				pokemon.addVolatile('leppaberry');
-				pokemon.volatiles['leppaberry'].move = move;
+				pokemon.volatiles['leppaberry'].moveSlot = moveSlot;
 				pokemon.eatItem();
 			}
 		},
 		onEat: function (pokemon) {
-			let move;
+			let moveSlot;
 			if (pokemon.volatiles['leppaberry']) {
-				move = pokemon.volatiles['leppaberry'].move;
+				moveSlot = pokemon.volatiles['leppaberry'].moveSlot;
 				pokemon.removeVolatile('leppaberry');
 			} else {
 				let pp = 99;
-				for (let moveid in pokemon.moveset) {
-					if (pokemon.moveset[moveid].pp < pp) {
-						move = pokemon.moveset[moveid];
-						pp = move.pp;
+				for (const possibleMoveSlot of pokemon.moveSlots) {
+					if (possibleMoveSlot.pp < pp) {
+						moveSlot = possibleMoveSlot;
+						pp = moveSlot.pp;
 					}
 				}
 			}
-			move.pp += 5;
-			if (move.pp > move.maxpp) move.pp = move.maxpp;
-			this.add('-activate', pokemon, 'item: Leppa Berry', move.move);
+			moveSlot.pp += 5;
+			if (moveSlot.pp > moveSlot.maxpp) moveSlot.pp = moveSlot.maxpp;
+			this.add('-activate', pokemon, 'item: Leppa Berry', moveSlot.move);
 			if (pokemon.item !== 'leppaberry') {
 				let foeActive = pokemon.side.foe.active;
 				let foeIsStale = false;
-				for (let i = 0; i < 1; i++) {
-					if (foeActive.isStale >= 2) {
+				for (let i = 0; i < foeActive.length; i++) {
+					if (foeActive[i].isStale >= 2) {
 						foeIsStale = true;
 						break;
 					}
@@ -6186,3 +6237,5 @@ exports.BattleItems = {
 		desc: "If held by a Crucibelle, this item allows it to Mega Evolve in battle.",
 	},
 };
+
+exports.BattleItems = BattleItems;

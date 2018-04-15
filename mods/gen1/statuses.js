@@ -41,7 +41,7 @@ exports.BattleStatuses = {
 		},
 		onBeforeMovePriority: 2,
 		onBeforeMove: function (pokemon) {
-			if (this.random(256) < 63) {
+			if (this.randomChance(63, 256)) {
 				this.add('cant', pokemon, 'par');
 				pokemon.removeVolatile('bide');
 				pokemon.removeVolatile('twoturnmove');
@@ -71,7 +71,7 @@ exports.BattleStatuses = {
 			if (pokemon.statusData.time > 0) {
 				this.add('cant', pokemon, 'slp');
 			}
-			pokemon.lastMove = '';
+			pokemon.lastMove = null;
 			return false;
 		},
 		onAfterMoveSelf: function (pokemon) {
@@ -86,7 +86,7 @@ exports.BattleStatuses = {
 		onBeforeMovePriority: 10,
 		onBeforeMove: function (pokemon, target, move) {
 			this.add('cant', pokemon, 'frz');
-			pokemon.lastMove = '';
+			pokemon.lastMove = null;
 			return false;
 		},
 		onHit: function (target, source, move) {
@@ -154,7 +154,7 @@ exports.BattleStatuses = {
 				return;
 			}
 			this.add('-activate', pokemon, 'confusion');
-			if (this.random(256) >= 128) {
+			if (!this.randomChance(128, 256)) {
 				// We check here to implement the substitute bug since otherwise we need to change directDamage to take target.
 				let damage = Math.floor(Math.floor(((Math.floor(2 * pokemon.level / 5) + 2) * pokemon.getStat('atk') * 40) / pokemon.getStat('def', false, false, true)) / 50) + 2;
 				if (pokemon.volatiles['substitute']) {
@@ -210,11 +210,11 @@ exports.BattleStatuses = {
 	},
 	partialtrappinglock: {
 		durationCallback: function () {
-			let duration = [2, 2, 2, 3, 3, 3, 4, 5][this.random(8)];
+			let duration = this.sample([2, 2, 2, 3, 3, 3, 4, 5]);
 			return duration;
 		},
 		onResidual: function (target) {
-			if (target.lastMove === 'struggle' || target.status === 'slp') {
+			if (target.lastMove && target.lastMove.id === 'struggle' || target.status === 'slp') {
 				delete target.volatiles['partialtrappinglock'];
 			}
 		},
@@ -225,10 +225,9 @@ exports.BattleStatuses = {
 			if (!pokemon.hasMove(this.effectData.move)) {
 				return;
 			}
-			let moves = pokemon.moveset;
-			for (let i = 0; i < moves.length; i++) {
-				if (moves[i].id !== this.effectData.move) {
-					pokemon.disableMove(moves[i].id);
+			for (const moveSlot of pokemon.moveSlots) {
+				if (moveSlot.id !== this.effectData.move) {
+					pokemon.disableMove(moveSlot.id);
 				}
 			}
 		},
@@ -256,7 +255,7 @@ exports.BattleStatuses = {
 				return (this.random() * 4294967296 < 1);
 			}
 			this.debug("Success chance: " + Math.round(100 / counter) + "%");
-			return (this.random(counter) === 0);
+			return this.randomChance(1, counter);
 		},
 		onRestart: function () {
 			if (this.effectData.counter < this.effect.counterMax) {

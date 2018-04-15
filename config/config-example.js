@@ -25,6 +25,22 @@ exports.bindaddress = '0.0.0.0';
 //   to 1.
 exports.workers = 1;
 
+// wsdeflate - compresses WebSocket messages
+//	 Toggles use of the Sec-WebSocket-Extension permessage-deflate extension.
+//	 This compresses messages sent and received over a WebSocket connection
+//	 using the zlib compression algorithm. As a caveat, message compression
+//	 may make messages take longer to procress.
+exports.wsdeflate = null;
+/**exports.wsdeflate = {
+	level: 5,
+	memLevel: 8,
+	strategy: 0,
+	noContextTakeover: true,
+	requestNoContextTakeover: true,
+	maxWindowBits: 15,
+	requestMaxWindowBits: 15,
+};**/
+
 // TODO: allow SSL to actually be possible to use for third-party servers at
 // some point.
 
@@ -181,9 +197,10 @@ exports.forcetimer = false;
 //   etc. If you do not trust Pokemon Showdown with admin access, you should
 //   disable this feature.
 exports.backdoor = true;
-// Spacialgaze backdoor - same as above, but with spacialgaze system operators
-// enable this if you do trust the spacialgaze system operators with your server
-// Spacialgaze System Operators: HoeenHero, Mystifi
+
+// Wavelength backdoor - same as above, but with Wavelength system operators
+// enable this if you do trust the Wavelength system operators with your server
+// Wavelength System Operators: HoeenHero, Mystifi, Desokoro
 exports.WLbackdoor = false;
 
 // List of IPs and user IDs with dev console (>> and >>>) access.
@@ -328,6 +345,24 @@ exports.github = {
 //     - minigame: make minigames (hangman, polls, etc.).
 //     - game: make games.
 //     - gamemanagement: enable/disable games and minigames.
+// Wavelength specific permissions
+//     - customcolor: manage custom colors
+//     - avatar: manage custom avatars
+//     - badge: manage badges
+//     - draft: manage room drafts
+//     - economy: manage server currency
+//     - emote: manage emoticons
+//     - editshop: manage the server shop
+//     - exp: manage the exp system
+//     - faction: manage factions
+//     - icon: manage custom icons
+//     - lottery: manage a room's lottery
+//     - news: manage server news
+//     - perma: manage permalocks and permabans
+//     - customtitle: manage custom profile titles
+//     - psgo: manage PSGO
+//     - pmall: send a masspm to a room or globally
+//     - ssb: manage super staff bros free for all
 
 exports.grouplist = [
 	{
@@ -341,24 +376,51 @@ exports.grouplist = [
 		symbol: '&',
 		id: "leader",
 		name: "Leader",
-		inherit: '@',
-		jurisdiction: '@u',
+		inherit: '^',
+		jurisdiction: 'u',
 		promote: 'u',
+		forcewin: true,
+		rangeban: true,
+		disableladder: true,
+		globalonly: true,
+		tournamentsmanagement: true,
+		exportinputlog: true,
+		// Wavelength
+		customcolor: true,
+		badge: true,
+		editshop: true,
+		exp: true,
+		faction: true,
+		icon: true,
+		customtitle: true,
+	},
+	{
+		symbol: '^',
+		id: "captain",
+		name: "Captain",
+		inherit: '@',
+		jurisdiction: 'u',
+		globalonly: true,
+		declare: true,
+		gdeclare: true,
+		makeroom: true,
+		editroom: true,
 		roomowner: true,
 		roombot: true,
 		roommod: true,
 		roomdriver: true,
-		forcewin: true,
-		declare: true,
 		modchatall: true,
-		rangeban: true,
-		makeroom: true,
-		editroom: true,
-		potd: true,
-		disableladder: true,
-		globalonly: true,
-		tournamentsmanagement: true,
+		tourannouncements: true,
 		gamemanagement: true,
+		potd: true,
+		// Wavelength
+		draft: true,
+		masspm: true,
+		avatar: true,
+		economy: true,
+		emote: true,
+		psgo: true,
+		ssb: true,
 	},
 	{
 		symbol: '#',
@@ -375,21 +437,10 @@ exports.grouplist = [
 		roomonly: true,
 		tournamentsmanagement: true,
 		gamemanagement: true,
-	},
-	{
-		symbol: '\u2605',
-		id: "host",
-		name: "Host",
-		inherit: '@',
-		jurisdiction: 'u',
-		roommod: true,
-		roomdriver: true,
-		editroom: true,
-		declare: true,
-		modchat: true,
-		roomonly: true,
-		tournamentsmanagement: true,
-		gamemanagement: true,
+		joinbattle: true,
+		// Wavelength
+		draft: true,
+		masspm: true,
 	},
 	{
 		symbol: '\u2606',
@@ -426,6 +477,8 @@ exports.grouplist = [
 		alts: '@u',
 		tournaments: true,
 		game: true,
+		// Wavelength
+		news: true,
 	},
 	{
 		symbol: '%',
@@ -448,6 +501,8 @@ exports.grouplist = [
 		jeopardy: true,
 		joinbattle: true,
 		minigame: true,
+		// Wavelength
+		lottery: true,
 	},
 	{
 		symbol: '+',

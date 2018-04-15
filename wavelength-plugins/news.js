@@ -29,6 +29,7 @@ WL.showNews = function (userid, user) {
 	if (!Db.NewsSubscribers.has(userid) || (userid in notifiedUsers)) return false;
 	let newsDisplay = generateNews();
 	if (newsDisplay.length > 0) {
+		if (newsDisplay.length > 2) newsDisplay.splice(0, newsDisplay.length - 2);
 		newsDisplay = `${newsDisplay.join(`<hr>`)}${showSubButton(userid)}`;
 		notifiedUsers[userid] = setTimeout(() => {
 			delete notifiedUsers[userid];
@@ -51,14 +52,15 @@ exports.commands = {
 		},
 		remove: 'delete',
 		delete: function (target, room, user) {
-			if (!this.can('ban')) return false;
+			if (!this.can('news')) return false;
 			if (!target) return this.parse('/help serverannouncements');
 			if (!Db.news.has(target)) return this.errorReply("News with this title doesn't exist.");
 			Db.news.remove(target);
-			this.privateModCommand(`(${user.name} deleted server announcement titled: ${target}.)`);
+			this.modlog(`NEWS`, null, `deleted announcement titled: ${target}.`);
+			this.privateModAction(`(${user.name} deleted server announcement titled: ${target}.)`);
 		},
 		add: function (target, room, user) {
-			if (!this.can('ban')) return false;
+			if (!this.can('news')) return false;
 			if (!target) return this.parse('/help serverannouncements');
 			let parts = target.split(',');
 			if (parts.length < 2) return this.errorReply("Usage: /news add [title], [desc]");
@@ -77,7 +79,8 @@ exports.commands = {
 			];
 			let postTime = `${MonthNames[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
 			Db.news.set(title, [postedBy, desc, postTime]);
-			this.privateModCommand(`(${user.name} added server announcement: ${parts[0]})`);
+			this.modlog(`NEWS`, null, `Added announcement: ${parts[0]}`);
+			this.privateModAction(`(${user.name} added server announcement: ${parts[0]})`);
 		},
 		subscribe: function (target, room, user) {
 			if (!user.named) return this.errorReply('You must choose a name before subscribing');

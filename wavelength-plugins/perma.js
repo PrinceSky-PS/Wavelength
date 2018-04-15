@@ -11,7 +11,7 @@ exports.commands = {
 	offlinepermalock: 'permalock',
 	forcepermalock: 'permalock',
 	permalock: function (target, room, user, connection, cmd) {
-		if (!this.can('lockdown')) return;
+		if (!this.can('perma')) return;
 		if (!toId(target)) return this.parse('/help permalock');
 		let tarUser = Users(target);
 		if (!tarUser && (cmd !== 'offlinepermalock' && cmd !== 'forceofflinepermalock')) return this.errorReply('User ' + target + ' not found. If your sure you want to permalock them, use /offlinepermalock.');
@@ -27,7 +27,7 @@ exports.commands = {
 			}
 			if (Rooms('upperstaff')) Monitor.adminlog('[PermaMonitor] ' + user.name + ' has (offline) permalocked ' + target + '.');
 			this.globalModlog("PERMALOCK", target, " by " + user.name);
-			return this.addModCommand(target + ' was permalocked by ' + user.name + '.');
+			return this.addModAction(target + ' was permalocked by ' + user.name + '.');
 		}
 		if (!tarUser.registered) return this.errorReply('Only registered users can be permalocked.');
 		if (Db.userType.get(tarUser.userid, 0) >= 5) {
@@ -41,12 +41,12 @@ exports.commands = {
 		if (tarUser.trusted) Monitor.log('[CrisisMonitor] Trusted user ' + tarUser.userid + ' was permalocked by ' + user.name + ' and was automatically demoted from ' + tarUser.distrust() + '.');
 		if (Rooms('upperstaff')) Monitor.adminlog('[PermaMonitor] ' + user.name + ' has permalocked ' + tarUser.name + '.');
 		this.globalModlog("PERMALOCK", tarUser, " by " + user.name);
-		return this.addModCommand(tarUser.name + ' was permalocked by ' + user.name + '.');
+		return this.addModAction(tarUser.name + ' was permalocked by ' + user.name + '.');
 	},
-	permalockhelp: ['/permalock user - Permalock a user. Requires: ~'],
+	permalockhelp: ['/permalock [user] - Permanently lock a user. Requires: ~'],
 
 	unpermalock: function (target, room, user, connection, cmd) {
-		if (!this.can('lockdown')) return;
+		if (!this.can('perma')) return;
 		if (!toId(target)) return this.parse('/help unpermalock');
 		target = toId(target);
 		if (Db.userType.get(target, 0) < 5) return this.errorReply(target + ' is not permalocked.');
@@ -56,15 +56,15 @@ exports.commands = {
 		if (Users(target)) Users(target).popup('Your permalock was lifted by ' + user.name + '.');
 		if (Rooms('upperstaff')) Monitor.adminlog('[PermaMonitor] ' + user.name + ' has unpermalocked ' + target + '.');
 		this.globalModlog("UNPERMALOCK", (Users(target) || target), " by " + user.name);
-		return this.addModCommand(target + ' was unpermalocked by ' + user.name + '.');
+		return this.addModAction(target + ' was unpermalocked by ' + user.name + '.');
 	},
-	unpermalockhelp: ['/unpermalock user - Unpermalock a user. Requires: ~'],
+	unpermalockhelp: ['/unpermalock [user] - Undo a permanent lock. Requires: ~'],
 
 	forceofflinepermaban: 'permaban',
 	offlinepermaban: 'permaban',
 	forcepermaban: 'permaban',
 	permaban: function (target, room, user, connection, cmd) {
-		if (!this.can('lockdown')) return;
+		if (!this.can('perma')) return;
 		if (!toId(target)) return this.parse('/help permaban');
 		let tarUser = Users(target);
 		if (!tarUser && (cmd !== 'offlinepermaban' && cmd !== 'forceofflinepermaban')) return this.errorReply('User ' + target + ' not found. If your sure you want to permaban them, use /offlinepermaban.');
@@ -80,7 +80,7 @@ exports.commands = {
 			}
 			if (Rooms('upperstaff')) Monitor.adminlog('[PermaMonitor] ' + user.name + ' has (offline) permabanned ' + target + '.');
 			this.globalModlog("PERMABAN", target, " by " + user.name);
-			return this.addModCommand(target + ' was permabanned by ' + user.name + '.');
+			return this.addModAction(target + ' was permabanned by ' + user.name + '.');
 		}
 		if (!tarUser.registered) return this.errorReply('Only registered users can be permalocked.');
 		if (Db.userType.get(tarUser.userid, 0) === 6) return this.errorReply(tarUser.name + ' is already permabanned.');
@@ -91,11 +91,11 @@ exports.commands = {
 		if (tarUser.trusted) Monitor.log('[CrisisMonitor] Trusted user ' + tarUser.userid + ' was permabanned by ' + user.name + ' and was automatically demoted from ' + tarUser.distrust() + '.');
 		if (Rooms('upperstaff')) Monitor.adminlog('[PermaMonitor] ' + user.name + ' has permabanned ' + tarUser.name + '.');
 		this.globalModlog("PERMABAN", tarUser, " by " + user.name);
-		return this.addModCommand(tarUser.name + ' was permabanned by ' + user.name + '.');
+		return this.addModAction(tarUser.name + ' was permabanned by ' + user.name + '.');
 	},
-	permabanhelp: ['/permaban user - Permaban a user. Requires: ~'],
+	permabanhelp: ['/permaban [user] - Permanently ban a user. Requires: ~'],
 	unpermaban: function (target, room, user, connection, cmd) {
-		if (!this.can('lockdown')) return;
+		if (!this.can('perma')) return;
 		if (!toId(target)) return this.parse('/help unpermaban');
 		target = toId(target);
 		if (Db.userType.get(target, 0) !== 6) return this.errorReply(target + ' is not permabanned.');
@@ -103,7 +103,7 @@ exports.commands = {
 		Punishments.unban(target);
 		if (Rooms('upperstaff')) Monitor.adminlog('[PermaMonitor] ' + user.name + ' has unpermabanned ' + target + '.');
 		this.globalModlog("UNPERMABAN", target, " by " + user.name);
-		return this.addModCommand(target + ' was unpermabanned by ' + user.name + '.');
+		return this.addModAction(target + ' was unpermabanned by ' + user.name + '.');
 	},
-	unpermabanhelp: ['/unpermaban user - Unpermaban a user. Requires: ~'],
+	unpermabanhelp: ['/unpermaban [user] - Undo a permanent ban. Requires: ~'],
 };
